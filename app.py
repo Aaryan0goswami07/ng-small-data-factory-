@@ -3,25 +3,25 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
-import io
 
 st.set_page_config(page_title="DataForge AI", layout="centered", page_icon="🔥")
 
 st.title("🔥 DataForge AI")
 st.subheader("Andrew Ng Small Data Engine — 92% accuracy with 100 real rows")
 
-st.write("Upload **any CSV with 100+ rows** (temperature, vibration, pressure, downtime_hrs) → Get a trained failure predictor in 30 seconds.")
+st.write("Upload **any CSV/Excel** with 100+ rows → Get a trained failure predictor in 30 seconds.")
 
-# MOBILE-SAFE UPLOADER (FIXES ANDROID/iOS BUG)
-uploaded_file = st.file_uploader("📁 Upload CSV", type=["csv", "xlsx"], key="csv_uploader_mobile")
+# MOBILE-FRIENDLY UPLOADER (supports CSV + Excel)
+uploaded_file = st.file_uploader("📁 Upload CSV or Excel", type=["csv", "xlsx"], key="file_uploader")
 
 if uploaded_file is not None:
     try:
+        # Handle both CSV and Excel
         if uploaded_file.name.endswith('.csv'):
             data = pd.read_csv(uploaded_file)
         else:
             data = pd.read_excel(uploaded_file)
-        
+
         if len(data) < 100:
             st.error("Need at least 100 rows!")
         else:
@@ -29,7 +29,7 @@ if uploaded_file is not None:
                 # 100 real rows
                 real = data.iloc[:100].copy()
                 
-                # 1000 synthetic
+                # 1000 synthetic rows
                 syn = pd.DataFrame({
                     'temperature': np.random.normal(75, 12, 1000),
                     'vibration': np.random.normal(5, 2.5, 1000),
@@ -39,29 +39,29 @@ if uploaded_file is not None:
                 
                 # Label both
                 for df in [real, syn]:
-                    df['failure'] = ((df['temperature']>85) | 
-                                   (df['vibration']>8) | 
-                                   (df['downtime_hrs']>2)).astype(int)
+                    df['failure'] = ((df['temperature'] > 85) | 
+                                   (df['vibration'] > 8) | 
+                                   (df['downtime_hrs'] > 2)).astype(int)
                 
+                # Train
                 train = pd.concat([real, syn])
                 X = train[['temperature','vibration','pressure','downtime_hrs']]
                 y = train['failure']
-                
                 model = LogisticRegression(max_iter=1000)
                 model.fit(X, y)
                 
                 st.success("✅ Model trained! 92% accuracy expected")
-                
+
                 # Test on next 100 rows
                 test = data.iloc[100:200] if len(data) > 200 else data.iloc[:100]
                 X_test = test[['temperature','vibration','pressure','downtime_hrs']]
+                true = ((test['temperature'] > 85) | (test['vibration'] > 8) | (test['downtime_hrs'] > 2)).astype(int)
                 preds = model.predict(X_test)
-                true = ((test['temperature']>85) | (test['vibration']>8) | (test['downtime_hrs']>2)).astype(int)
                 acc = accuracy_score(true, preds)
-                st.metric("Live Accuracy", f"{acc:.1%}")
-                
+                st.metric("Live Accuracy on Test Data", f"{acc:.1%}")
+
                 # Prediction tool
-                st.subheader("🔮 Predict Failure")
+                st.subheader("🔮 Live Prediction")
                 col1, col2 = st.columns(2)
                 with col1:
                     temp = st.slider("Temperature", 50, 110, 75)
@@ -70,12 +70,19 @@ if uploaded_file is not None:
                     press = st.slider("Pressure", 50, 150, 100)
                     down = st.slider("Downtime (hrs)", 0, 4, 0)
                 
-                pred = model.predict([[temp, vib, press, down]])[0]
-                color = "red" if pred == 1 else "green"
-                st.markdown(f"### **Prediction**: <span style='color:{color}'>{'FAILURE' if pred==1 else 'NORMAL'}</span>", unsafe_allow_html=True)
+                # FIXED: No sklearn warning
+                input_df = pd.DataFrame([[temp, vib, press, down]], 
+                                      columns=['temperature','vibration','pressure','downtime_hrs'])
+                pred = model.predict(input_df)[0]
                 
+                color = "red" if pred == 1 else "green"
+                st.markdown(f"### **Prediction**: <span style='color:{color};font-size:32px'>{'⚠️ FAILURE' if pred==1 else '✅ NORMAL'}</span>", 
+                           unsafe_allow_html=True)
+
     except Exception as e:
         st.error(f"Error: {e}")
 
-st.write("Built by Aaryan Goswami | 2nd Yr BBA Analytics @ MUJ")
-st.write("Inspired by Andrew Ng's Data-Centric AI")
+st.write("Built by **Aaryan Goswami** | 2nd Yr BBA Analytics @ MUJ")
+st.write("Inspired by **Andrew Ng's Data-Centric AI**")
+st.markdown("---")
+st.caption("Open to 2026 internships (Fractal | Tiger | MuSigma – DM!)")
