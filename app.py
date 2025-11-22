@@ -17,7 +17,7 @@ st.subheader("Andrew Ng Small Data Engine — 92% accuracy with 100 real rows")
 
 st.write("Upload **any CSV with 100+ rows** (temperature, vibration, pressure, downtime_hrs) → Get a trained failure predictor in 30 seconds.")
 
-uploaded_file = st.file_uploader("📁 Upload CSV", type=["csv"])
+uploaded_file = st.file_uploader("📁 Upload CSV", type=["csv"], key="csv_uploader")
 
 if uploaded_file is not None:
     try:
@@ -80,3 +80,4 @@ if uploaded_file is not None:
 
 st.write("Built by Aaryan Goswami | 2nd Yr BBA Analytics @ MUJ")
 st.write("Inspired by Andrew Ng's Data-Centric AI")
+
