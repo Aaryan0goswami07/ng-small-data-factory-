@@ -4,61 +4,59 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 
+# AUTO-FIX: Install missing packages (openpyxl for Excel, scikit-learn)
+import subprocess
+import sys
+subprocess.call([sys.executable, "-m", "pip", "install", "openpyxl", "scikit-learn", "--quiet"])
+
 st.set_page_config(page_title="DataForge AI", layout="centered", page_icon="🔥")
 
 st.title("🔥 DataForge AI")
 st.subheader("Andrew Ng Small Data Engine — 92% accuracy with 100 real rows")
 
-st.write("Upload **any CSV/Excel** with 100+ rows → Get a trained failure predictor in 30 seconds.")
+st.write("Upload **any CSV or Excel file** with 100+ rows → Get a trained failure predictor in 30 seconds.")
 
-# MOBILE-FRIENDLY UPLOADER (supports CSV + Excel)
-uploaded_file = st.file_uploader("📁 Upload CSV or Excel", type=["csv", "xlsx"], key="file_uploader")
+uploaded_file = st.file_uploader("📁 Upload CSV or Excel", type=["csv", "xlsx"], key="upload")
 
 if uploaded_file is not None:
     try:
-        # Handle both CSV and Excel
+        # Read CSV or Excel (openpyxl fixed)
         if uploaded_file.name.endswith('.csv'):
             data = pd.read_csv(uploaded_file)
         else:
-            data = pd.read_excel(uploaded_file)
+            data = pd.read_excel(uploaded_file)  # openpyxl auto-installed
 
         if len(data) < 100:
             st.error("Need at least 100 rows!")
         else:
             with st.spinner("Generating synthetic data + training model..."):
-                # 100 real rows
                 real = data.iloc[:100].copy()
-                
-                # 1000 synthetic rows
+
                 syn = pd.DataFrame({
                     'temperature': np.random.normal(75, 12, 1000),
                     'vibration': np.random.normal(5, 2.5, 1000),
                     'pressure': np.random.normal(100, 20, 1000),
                     'downtime_hrs': np.random.choice([0,1,2,3,4], 1000, p=[0.75,0.1,0.08,0.04,0.03]),
                 })
-                
-                # Label both
+
                 for df in [real, syn]:
-                    df['failure'] = ((df['temperature'] > 85) | 
-                                   (df['vibration'] > 8) | 
-                                   (df['downtime_hrs'] > 2)).astype(int)
-                
-                # Train
+                    df['failure'] = ((df['temperature']>85) | (df['vibration']>8) | (df['downtime_hrs']>2)).astype(int)
+
                 train = pd.concat([real, syn])
                 X = train[['temperature','vibration','pressure','downtime_hrs']]
                 y = train['failure']
                 model = LogisticRegression(max_iter=1000)
                 model.fit(X, y)
-                
+
                 st.success("✅ Model trained! 92% accuracy expected")
 
-                # Test on next 100 rows
+                # Test
                 test = data.iloc[100:200] if len(data) > 200 else data.iloc[:100]
                 X_test = test[['temperature','vibration','pressure','downtime_hrs']]
-                true = ((test['temperature'] > 85) | (test['vibration'] > 8) | (test['downtime_hrs'] > 2)).astype(int)
+                true = ((test['temperature']>85) | (test['vibration']>8) | (test['downtime_hrs']>2)).astype(int)
                 preds = model.predict(X_test)
                 acc = accuracy_score(true, preds)
-                st.metric("Live Accuracy on Test Data", f"{acc:.1%}")
+                st.metric("Live Accuracy", f"{acc:.1%}")
 
                 # Prediction tool
                 st.subheader("🔮 Live Prediction")
@@ -69,12 +67,10 @@ if uploaded_file is not None:
                 with col2:
                     press = st.slider("Pressure", 50, 150, 100)
                     down = st.slider("Downtime (hrs)", 0, 4, 0)
-                
-                # FIXED: No sklearn warning
+
                 input_df = pd.DataFrame([[temp, vib, press, down]], 
                                       columns=['temperature','vibration','pressure','downtime_hrs'])
                 pred = model.predict(input_df)[0]
-                
                 color = "red" if pred == 1 else "green"
                 st.markdown(f"### **Prediction**: <span style='color:{color};font-size:32px'>{'⚠️ FAILURE' if pred==1 else '✅ NORMAL'}</span>", 
                            unsafe_allow_html=True)
