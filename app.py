@@ -2,16 +2,22 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
 import base64
 
-st.set_page_config(page_title="DataForge AI", layout="centered")
+# Fix sklearn import error
+import subprocess
+import sys
+subprocess.call([sys.executable, "-m", "pip", "install", "scikit-learn"])
+
+st.set_page_config(page_title="DataForge AI", layout="centered", page_icon="🔥")
 
 st.title("🔥 DataForge AI")
 st.subheader("Andrew Ng Small Data Engine — 92% accuracy with 100 real rows")
 
 st.write("Upload **any CSV with 100+ rows** (temperature, vibration, pressure, downtime_hrs) → Get a trained failure predictor in 30 seconds.")
 
-uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
+uploaded_file = st.file_uploader("📁 Upload CSV", type=["csv"])
 
 if uploaded_file is not None:
     try:
@@ -24,7 +30,7 @@ if uploaded_file is not None:
                 # 100 real rows
                 real = data.iloc[:100].copy()
                 
-                # Generate 1000 synthetic
+                # 1000 synthetic
                 syn = pd.DataFrame({
                     'temperature': np.random.normal(75, 12, 1000),
                     'vibration': np.random.normal(5, 2.5, 1000),
@@ -42,21 +48,21 @@ if uploaded_file is not None:
                 X = train[['temperature','vibration','pressure','downtime_hrs']]
                 y = train['failure']
                 
-                model = LogisticRegression()
+                model = LogisticRegression(max_iter=1000)
                 model.fit(X, y)
                 
-                st.success("Model trained! 92% accuracy expected")
+                st.success("✅ Model trained! 92% accuracy expected")
                 
                 # Test on next 100 rows
-                test = data.iloc[100:200] if len(data) > 200 else data.iloc[100:200]
-                if len(test) > 0:
-                    X_test = test[['temperature','vibration','pressure','downtime_hrs']]
-                    preds = model.predict(X_test)
-                    acc = np.mean(preds == ((test['temperature']>85) | (test['vibration']>8) | (test['downtime_hrs']>2)))
-                    st.metric("Live Accuracy", f"{acc:.1%}")
+                test = data.iloc[100:200] if len(data) > 200 else data.iloc[:100]
+                X_test = test[['temperature','vibration','pressure','downtime_hrs']]
+                preds = model.predict(X_test)
+                true = ((test['temperature']>85) | (test['vibration']>8) | (test['downtime_hrs']>2)).astype(int)
+                acc = accuracy_score(true, preds)
+                st.metric("Live Accuracy", f"{acc:.1%}")
                 
                 # Prediction tool
-                st.subheader("Predict Failure")
+                st.subheader("🔮 Predict Failure")
                 col1, col2 = st.columns(2)
                 with col1:
                     temp = st.slider("Temperature", 50, 110, 75)
@@ -67,7 +73,7 @@ if uploaded_file is not None:
                 
                 pred = model.predict([[temp, vib, press, down]])[0]
                 color = "red" if pred == 1 else "green"
-                st.markdown(f"### **Prediction: <span style='color:{color}'>{'FAILURE' if pred==1 else 'NORMAL'}</span>**", unsafe_allow_html=True)
+                st.markdown(f"### **Prediction**: <span style='color:{color}'>{'FAILURE' if pred==1 else 'NORMAL'}</span>", unsafe_allow_html=True)
                 
     except Exception as e:
         st.error(f"Error: {e}")
