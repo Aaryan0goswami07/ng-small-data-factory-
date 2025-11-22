@@ -3,12 +3,7 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
-import base64
-
-# Fix sklearn import error
-import subprocess
-import sys
-subprocess.call([sys.executable, "-m", "pip", "install", "scikit-learn"])
+import io
 
 st.set_page_config(page_title="DataForge AI", layout="centered", page_icon="🔥")
 
@@ -17,11 +12,15 @@ st.subheader("Andrew Ng Small Data Engine — 92% accuracy with 100 real rows")
 
 st.write("Upload **any CSV with 100+ rows** (temperature, vibration, pressure, downtime_hrs) → Get a trained failure predictor in 30 seconds.")
 
-uploaded_file = st.file_uploader("📁 Upload CSV", type=["csv"], key="csv_uploader")
+# MOBILE-SAFE UPLOADER (FIXES ANDROID/iOS BUG)
+uploaded_file = st.file_uploader("📁 Upload CSV", type=["csv", "xlsx"], key="csv_uploader_mobile")
 
 if uploaded_file is not None:
     try:
-        data = pd.read_csv(uploaded_file)
+        if uploaded_file.name.endswith('.csv'):
+            data = pd.read_csv(uploaded_file)
+        else:
+            data = pd.read_excel(uploaded_file)
         
         if len(data) < 100:
             st.error("Need at least 100 rows!")
@@ -80,4 +79,3 @@ if uploaded_file is not None:
 
 st.write("Built by Aaryan Goswami | 2nd Yr BBA Analytics @ MUJ")
 st.write("Inspired by Andrew Ng's Data-Centric AI")
-
