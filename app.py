@@ -33,12 +33,19 @@ if uploaded_file is not None:
             with st.spinner("Generating synthetic data + training model..."):
                 real = data.iloc[:100].copy()
 
-                syn = pd.DataFrame({
-                    'temperature': np.random.normal(75, 12, 1000),
-                    'vibration': np.random.normal(5, 2.5, 1000),
-                    'pressure': np.random.normal(100, 20, 1000),
-                    'downtime_hrs': np.random.choice([0,1,2,3,4], 1000, p=[0.75,0.1,0.08,0.04,0.03]),
-                })
+               # REALISTIC SYNTHETIC DATA (NO MORE OVERFITTING)
+syn = pd.DataFrame({
+    'temperature': np.random.normal(75, 15, 1000),   # wider noise
+    'vibration': np.random.normal(5, 3.5, 1000),     # more variation
+    'pressure': np.random.normal(100, 25, 1000),
+    'downtime_hrs': np.random.choice([0,1,2,3,4,5,6], 1000, p=[0.6,0.15,0.1,0.08,0.04,0.02,0.01]), # rare extremes
+})
+
+# ADD RANDOM MISLABELING (5% of rows get wrong label — like real factories)
+syn['failure'] = ((syn['temperature']>85) | (syn['vibration']>8) | (syn['downtime_hrs']>2)).astype(int)
+# Flip 5% labels randomly
+flip_idx = np.random.choice(syn.index, size=int(0.05*len(syn)), replace=False)
+syn.loc[flip_idx, 'failure'] = 1 - syn.loc[flip_idx, 'failure']
 
                 for df in [real, syn]:
                     df['failure'] = ((df['temperature']>85) | 
@@ -83,3 +90,4 @@ if uploaded_file is not None:
 
 st.write("Built by **Aaryan Goswami** | 2nd Yr BBA Analytics @ MUJ")
 st.write("Inspired by **Andrew Ng's Data-Centric AI**")
+
